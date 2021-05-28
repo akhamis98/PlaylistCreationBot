@@ -10,7 +10,7 @@ var spotifyToken;
 var spotifyAuthExpirationTime;
 //regex will match if the embed has the form "TRACK Single by ARTIST" or "ALBUM by ARTIST"
 let appleMusicRegex = /(.+) \- Single by (.*)|(.+) by (.*)|(.+) \- EP by (.*)/
-
+//regex will extract the number of songs in an embed
 let songNumberRegex = /.*([\d]+) Song.*/
 
 // Configure logger settings
@@ -28,7 +28,7 @@ tokenRequest.onload = function() {
     if (tokenRequest.readyState == 4) {
         logger.info("Getting auth token from Spotify");
         var data = JSON.parse(this.responseText)
-    
+        //if a success (this should be done better), set the new spotify token and update the expiration time
         if (tokenRequest.status >= 200 && tokenRequest.status < 400) {
             logger.info("Set spotify token as " + data.access_token + " expires in " + data.expires_in);
             spotifyToken = data.access_token;
@@ -83,6 +83,7 @@ bot.on('message', message => {
             }
             
             logger.info("Searching for track " + arr);
+            //query for the embed info for albums and tracks
             request.open('GET', "https://api.spotify.com/v1/search?q=" + searchTitle + "&type=album,track", true);
             logger.info("URL = " + "https://api.spotify.com/v1/search?q=" + searchTitle + "&type=album,track");
             //set our token
