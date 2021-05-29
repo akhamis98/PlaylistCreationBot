@@ -7,7 +7,7 @@ var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 var tokenRequest = new XMLHttpRequest();
 var request = new XMLHttpRequest();
 var spotifyToken;
-var spotifyAuthExpirationTime;
+var spotifyAuthExpirationTime = 0;
 //regex will match if the embed has the form "TRACK Single by ARTIST" or "ALBUM by ARTIST"
 let appleMusicRegex = /(.+) \- Single by (.*)|(.+) by (.*)|(.+) \- EP by (.*)/
 //regex will extract the number of songs in an embed
@@ -20,29 +20,32 @@ logger.add(new logger.transports.Console, {
     colorize: true
 });
 logger.level = 'debug';
-tokenRequest.open('POST', "https://accounts.spotify.com/api/token", false);
-tokenRequest.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-tokenRequest.setRequestHeader("Authorization", "Basic " + new Buffer(auth.spotifyAuth).toString("base64"));
-//get our spotify api token using our authentication from the spotify API site
-tokenRequest.onload = function() {
-    // Begin accessing JSON data here
-    if (tokenRequest.readyState == 4) {
-        logger.info("Getting auth token from Spotify");
-        logger.info("this.responseText = " + this.responseText);
-        var data = JSON.parse(this.responseText);
-        //if a success (this should be done better), set the new spotify token and update the expiration time
-        if (tokenRequest.status >= 200 && tokenRequest.status < 400) {
-            logger.info("Set spotify token as " + data.access_token + " expires in " + data.expires_in);
-            spotifyToken = data.access_token;
-            spotifyAuthExpirationTime = Date.now() + data.expires_in*1000;
-        } else {
-        console.log('error')
+
+//spotify auth token generation code
+function getSpotifyAuthToken() {
+    logger.info("Auth expired, getting new auth");
+    tokenRequest = new XMLHttpRequest();
+    tokenRequest.open('POST', "https://accounts.spotify.com/api/token", false);
+    tokenRequest.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    tokenRequest.setRequestHeader("Authorization", "Basic " + new Buffer(auth.spotifyAuth).toString("base64"));
+    tokenRequest.onload = function() {
+        // Begin accessing JSON data here
+        if (tokenRequest.readyState == 4) {
+            logger.info("Getting auth token from Spotify");
+            logger.info("this.responseText = " + this.responseText);
+            var data = JSON.parse(this.responseText);
+            //if a success (this should be done better), set the new spotify token and update the expiration time
+            if (tokenRequest.status >= 200 && tokenRequest.status < 400) {
+                logger.info("Set spotify token as " + data.access_token + " expires in " + data.expires_in);
+                spotifyToken = data.access_token;
+                spotifyAuthExpirationTime = Date.now() + data.expires_in*1000;
+            } else {
+            console.log('error')
+            }
         }
     }
-    
+    tokenRequest.send(encodeURIComponent("grant_type") + "=" + encodeURIComponent("client_credentials"));
 }
-logger.info("Send request");
-tokenRequest.send(encodeURIComponent("grant_type") + "=" + encodeURIComponent("client_credentials"));
 
 // Initialize Discord Bot
 var bot = new Discord.Client({
@@ -55,19 +58,13 @@ bot.on('ready', function (evt) {
     logger.info('Logged in as: ');
     logger.info(bot.username + ' - (' + bot.id + ')');
 });
-bot.on('message', message => {
-    
+bot.on('message', message => { 
     //if its an apple music link, convert to spotify link
     if (message.content.includes("music.apple.com")) {
         message.embeds.forEach( embed => {
             //if our spotify api token is expired, get a new one
             if (Date.now() >= spotifyAuthExpirationTime) {
-                logger.info("Auth expired, getting new auth");
-                tokenRequest = new XMLHttpRequest();
-                tokenRequest.open('POST', "https://accounts.spotify.com/api/token", false);
-                tokenRequest.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                tokenRequest.setRequestHeader("Authorization", "Basic " + new Buffer(auth.spotifyAuth).toString("base64"));
-                tokenRequest.send(encodeURIComponent("grant_type") + "=" + encodeURIComponent("client_credentials"));
+                getSpotifyAuthToken();
             }
             logger.info("Current time = " + Date.now() + ", spotifyAuthExpirationTime = " + spotifyAuthExpirationTime);
             //read song title and artist name(s) from the embed
