@@ -3,11 +3,11 @@ var Discord = require('discord.js');
 var logger = require('winston');
 //auth.json should have params "auth" and "spotifyAuth" for the discord bot and spotify api respectively
 var auth = require('./auth.json');
-var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
-var tokenRequest = new XMLHttpRequest();
-var request = new XMLHttpRequest();
-var spotifyToken;
-var spotifyAuthExpirationTime = 0;
+let XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+let tokenRequest = new XMLHttpRequest();
+let request = new XMLHttpRequest();
+let spotifyToken;
+let spotifyAuthExpirationTime = 0;
 //regex will match if the embed has the form "TRACK Single by ARTIST" or "ALBUM by ARTIST"
 let appleMusicRegex = /(.+) \- Single by (.*)|(.+) by (.*)|(.+) \- EP by (.*)/
 //regex will extract the number of songs in an embed
@@ -36,11 +36,11 @@ function getSpotifyAuthToken() {
             var data = JSON.parse(this.responseText);
             //if a success (this should be done better), set the new spotify token and update the expiration time
             if (tokenRequest.status >= 200 && tokenRequest.status < 400) {
-                logger.info("Set spotify token as " + data.access_token + " expires in " + data.expires_in);
                 spotifyToken = data.access_token;
-                spotifyAuthExpirationTime = Date.now() + data.expires_in*1000;
+                spotifyAuthExpirationTime = Date.now() - 1000 + data.expires_in*1000;
+                logger.info("Set spotify token as " + data.access_token + " expires at " + spotifyAuthExpirationTime);
             } else {
-            console.log('error')
+                logger.error("unexpected response from spotify API, status = " + tokenRequest.status + " response = " + this.responseText);
             }
         }
     }
@@ -89,7 +89,8 @@ bot.on('message', message => {
             }
             //query spotify api for the song/album and artist for albums and tracks
             logger.info("Searching for track " + arr);
-            request.open('GET', "https://api.spotify.com/v1/search?q=" + searchTitle + "&type=album,track", true);
+            request = new XMLHttpRequest();
+            request.open('GET', "https://api.spotify.com/v1/search?q=" + searchTitle + "&type=album,track", false);
             logger.info("URL = " + "https://api.spotify.com/v1/search?q=" + searchTitle + "&type=album,track");
             //set our token
             request.setRequestHeader("Authorization", "Bearer " + spotifyToken);
@@ -114,7 +115,7 @@ bot.on('message', message => {
                         logger.error(err.message);
                     }
                 } else {
-                  console.log('error')
+                    logger.error("Error when getting song info from spotify using token " + spotifyToken + ", response = " + this.responseText);
                 }
             }
               
