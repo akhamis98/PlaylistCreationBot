@@ -104,7 +104,8 @@ bot.on('message', message => {
                         //since AM embeds don't actually contain accurated info if something is a single or an album
                         //we instead check the song number, then query for that for our spotify link (shorter embeds when possible)
                         logger.info(embed.description);
-                        if (parseInt(embed.description.match(songNumberRegex)[1], 10) == 1) {
+                        //null catches the case of Song - LENGTH - YYYY
+                        if (embed.description.match(songNumberRegex) == null || parseInt(embed.description.match(songNumberRegex)[1], 10) == 1) {
                             bot.channels.cache.get(message.channel.id).send(data.tracks.items[0].external_urls.spotify);
                         }
                         else {
