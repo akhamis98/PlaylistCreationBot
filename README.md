@@ -15,5 +15,6 @@ Env vars expects 'token' (for the discord bot) and 'spotifyAuth' (from the spoti
 ## TODO
 
 TODO: set spotify bearer tokens in a DB by discord userId, and then keep their refreshTokens for later (can refresh them easily)
+
 TODO: get spotify usernames through discord API (connections) https://discord.com/developers/docs/topics/oauth2
        -need to Oauth for discord per user for this
